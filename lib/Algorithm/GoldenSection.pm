@@ -5,7 +5,7 @@ use strict;
 use Carp;
 use Readonly;
 
-use version; our $VERSION = qv('0.0.1');
+use version; our $VERSION = qv('0.0.2');
 
 =head1 NAME
 
@@ -14,7 +14,7 @@ Algorithm::GoldenSection - Golden Section Search Algorithm for one-dimensional m
 =cut
 =head1 VERSION
 
-This document describes Algorithm::GoldenSection version 0.0.1
+This document describes Algorithm::GoldenSection version 0.0.2
 
 =cut
 =head1 DESCRIPTION

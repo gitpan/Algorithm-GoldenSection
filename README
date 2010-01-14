@@ -1,4 +1,4 @@
-Algorithm-GoldenSection version 0.0.1
+Algorithm-GoldenSection version 0.0.2
 
 This module is an implementation of the Golden Section Search Algorithm for finding minima of a unimodal function. 
 In order to isolate a minimum of a univariate functions the minimum must first be isolated. 
