@@ -1,0 +1,475 @@
+use strict;
+use warnings;
+
+#/ I had leaving things for operator precedence. you won´t see A+B*(C-D) whe you mean: A+( B*(C-D) ) - i.e. * binds more tightly that +
+
+
+#/ bracketing - a minimum is bracketed when there is a triplet of points a, b and c for which f(b) is less than both f(a) and f(c)
+#y in this case we KNOW that there is a minimum in the interval a---c
+
+#=fs Constants defined with Readonly
+use Readonly;
+Readonly::Scalar my $gold => 1.618034 ;
+Readonly::Scalar my $glimit => 100.0 ;
+Readonly::Scalar my $tiny => 1.0e-20 ;
+
+my $C_other = (3-sqrt(5))/2;
+my $R_other = 1-$C_other;
+Readonly::Scalar my $tolerance => 3.0e-8;  # tolerance
+#Readonly::Scalar my $R => 0.61803399;
+#Readonly::Scalar my $C => 1.0-$R;
+Readonly::Scalar my $C => (3-sqrt(5))/2;
+Readonly::Scalar my $R => 1-$C;
+
+print qq{\nconstants (C: $C) and (C_other: $C_other) and (R: $R) and (R_other: $R_other)};
+#=fe
+
+#=fs Package-scoped lexicals - really ought to do something a bit more sophisticated that this
+my $a;
+my $b;
+my $c;
+my $f_a;
+my $f_b;
+my $f_c;
+
+my $xmin;
+my $fmin;
+#=fe
+
+sub minimise {
+
+
+
+    my $func = shift;
+
+#    Readonly::Scalar my $R => 0.61803399;
+#    Readonly::Scalar my $C => 1.0-$R;
+
+    #y declare our X points... clearly we are going to be bracketed on interval a to c - as we have a<b<c or c<b<a with f(b) < f(a) and f(c)
+    my $x1;
+    my $x2;
+    my $x0 = $a;
+    my $x3 = $c;
+
+    print qq{\n\n(a) in minimisation: checking (x0: $x0) should be (a: $a) and (x3: $x3) should be (c: $c)};
+
+    #y make x0 to x1 smaller
+    if ( abs($c-$b) > abs($b-$a) ) {
+        $x1 = $b;
+
+        #y create new point to try
+        #/ op-prec
+        #$x2 = $b+$C*($c-$b);
+        $x2 = $b + ( $C * ($c-$b) );
+    }
+    else {
+        
+        #print qq{\n(a-1) we can we that this is the way we go};
+        $x2 = $b;
+        #$x1 = $b-$C*($b-$a);
+        #y create new point to try
+        $x1 = $b - ( $C * ($b-$a) );
+    }
+    
+    print qq{\n(b) in minimisation: just assigned Xs: $x0 and $x1 and $x2 and $x3};
+
+    #y initial function evaluations
+    my $f1 = $func->($x1);
+    my $f2 = $func->($x2);
+
+############################## checked up to here #################################
+    print qq{\n(c) in minimisation: just put in Fs: f1 $f1 and f2 $f2};
+
+    #y lets add a counter for output
+    my $counter = 0;
+    #while (abs($x3-$x0) > $tolerance*(abs($x1)+abs($x2))) {
+
+    #y start iterating...
+    while ( abs($x3-$x0) > ( $tolerance * ( abs($x1) + abs($x2) ) ) ) {
+        #y lets increment here just to make it easier - hence start with 0
+        $counter++;
+        #print qq{\n(d) we iterate - $counter};
+
+        #y a possible outcome
+        if ( $f2 < $f1 ) {
+            #print qq{\n(c-1) we know that this is the way we go (f1: $f1) is greater than (f2: $f2)};
+
+            #########################################
+            #y choose one of the two - but why the fuck-up with $R multiplication?!?
+            #########################################
+            #y the following is identical to:
+            $x0 = $x1;
+            $x1 = $x2;
+            #r///////////////////////////////////////
+            #y second question:
+            #r///////////////////////////////////////
+                #$x2 = ($R*$x1 + C*x3;   % x2 = x1+c*(x3-x1)
+            $x2 = ($R*$x2) + ($C*$x3); #
+            #r///////////////////////////////////////
+            $f1 = $f2;
+            $f2 = $func->($x2);
+
+            #########################################
+#            my $x_temp = ($R*$x2) + ($C*$x3);
+
+#            &_shft3(\$x0,\$x1,\$x2,\$x_temp);
+
+                #y new function evaluation
+#            my $f_x_temp = $func->($x2);
+#            &_shft2(\$f1,\$f2,\$f_x_temp);
+            #########################################
+
+        }
+        #y other possibility
+        else {
+            #print qq{\n(c-2) we know that this is the way we go (f2: $f2) is greater than (f1: $f1)};
+            #print qq{\n$counter WE NEED TO LOOK BEFORE AND AFTER - (x3: $x3) and (x2: $x2) and (x1: $x1) and (f2: $f2) and (f1: $f1)};            
+
+            #########################################
+            #y choose one of the two - but why the fuck-up with $R multiplication?!?
+            #########################################
+            #y this is all the same as:
+
+
+            $x3 = $x2;
+            $x2 = $x1;
+            #r///////////////////////////////////////
+            #y second question:
+            #r///////////////////////////////////////
+                # x1 = R*x2 + C*x0;   % x1 = x2+c*(x0-x2)
+            $x1 = ($R*$x1) + ($C*$x0);
+            #r///////////////////////////////////////
+            $f2 = $f1;
+            $f1 = $func->($x1);
+
+            #########################################
+#            my $x_temp = ($R*$x1) + ($C*$x0);
+#            &_shft3(\$x3,\$x2,\$x1,\$x_temp);
+
+#            my $f_x_temp = $func->($x1);
+            #/ the error:
+            #my $f_x_temp = $func->($x2);
+#            &_shft2(\$f2,\$f1,\$f_x_temp);
+
+            #print qq{\n$counter WE NEED TO LOOK BEFORE AND AFTER - (x3: $x3) and (x2: $x2) and (x1: $x1) and (f2: $f2) and (f1: $f1)};            
+        }
+    #/ end of while
+    }
+   
+    print qq{\n(d) in minimisation: (f1: $f1) and (f2: $f2) and the Xs (x1: $x1), (x2: $x2)\n};
+
+    #y set final values
+    if ($f1 < $f2) { 
+        $xmin = $x1;
+        $fmin = $f1;
+    }
+    else {
+        $xmin = $x2;
+        $fmin = $f2;
+        #print qq{\n(d-1) we know we go this way here - x2 $x2 and xmin $xmin and f2 $f2 and fmin $fmin};
+    }
+
+    #print qq{\n(e) we know we go this way here - xmin $xmin and fmin $fmin};
+    #my $fuckit = fun->($xmin);
+    #print qq{\n(f) let us see: fuckit $fuckit};
+    return $xmin, $fmin, $counter;
+}
+
+#/ need to go through all of ´bracket´ - there must be an error here - probably in ´minimise´ too!
+sub bracket {
+    my $function = shift;
+    
+    # use some constants - that means readonly
+    
+print qq{\n(1) in bracket: just showing (a: $a) and now (b: $b)};
+    
+    my $f_u;
+    $f_a = $function->($a);
+    $f_b = $function->($b);
+   
+print qq{\n(2) in bracket: just assinged Fs (fa: $f_a) and now (fb: $f_b)};
+
+    #/ switch roles if the Function values are the wrong way - not the raw values - so that we are proceeding in a negative gradient
+    #y that is downhill
+    if ($f_b > $f_a ) { 
+        print qq{\n\n**** in this case fb is higher than fa - thus we are going uphill so we need to swap them****\n};
+        # we can´t go downhill in this case. need to swap them around
+        my $buf = $a;
+        my $f_buf = $f_a;
+
+        $a = $b;
+        $f_a = $f_b;
+
+        $b = $buf;
+        $f_b = $f_buf;
+    }
+    
+print qq{\n(3) in bracket: just showing (a: $a) and now (b: $b)};
+print qq{\n(4) in bracket: just assinged Fs (fa: $f_a) and now (fb: $f_b)};
+# so we correctly reverse the values
+
+
+#/ * has higher precedence that + thus: $c = $b+$gold*($b-$a);  is the same as $c = $b+($gold*($b-$a)); - same in C/C++
+    #y WE MAKE A GUESS AT A VALUE OF C
+    #$c = $b+$gold*($b-$a); # c 26.18034 and f_c 21.6787847478271
+    $c = $b + ( $gold * ($b-$a) ); # c 26.18034 and f_c 21.6787847478271
+    #$c = ($b+$gold)*($b-$a); # c 116.18034 and f_c 8.79946993592974
+
+    $f_c = $function->($c);
+    print qq{\n(5) in bracket: just assgined a first guess at (c: $c) and (f_c: $f_c)};
+
+    print qq{\n\n***RECALL - we are aiming for an interval a-c where a<b<c etc. and f(b) is LOWER than f(a) and f(c) thus the interval a-c MUST contain a minimum\n};
+    if ($f_b < $f_a && $f_b < $f_c) { print qq{\n#### (6) we have our condition\n} } else { print qq{\n#### (6) we don not have our condition\n} }
+    print qq{\n(7) in bracket: so (fa: $f_a) shoulbe be higher than (fb: $f_b) which should be lower than (f_c: $f_c)};
+
+#/ (1) by SWAPPING we are sure that f(a) > f(b)! - (2) BUT we must also have f(b) < f(c) in order to have bracketed our MINIMUM
+print qq{\n\n****by SWAPPING we are sure that f(a) > f(b)! - BUT we must also have f(b) < f(c) in order to have bracketed our MINIMUM***\n\n};
+
+#y so we make a while loop that will iterate until the second condition is met - i.e. we will modify c until...
+#y we need f(b) < f(c) thus - could do until (f(b) < f(c)) or while (f(b) > (f(c))
+while ( $f_b > $f_c ) {
+    
+        #y compute u by parabolic extrapolation - tiny is there just to stop ilegal divisions by 0
+        my $r = ($b-$a)*($f_b-$f_c);
+        my $q = ($b-$c)*($f_b-$f_a);
+        print qq{\n\n+++++++++ we apply max to abs(q-r) and tiny: (q: $q), (r: $r) and (abs q-r: }, abs ($q-$r), qq{ and (tiny: $tiny) then we do sign on that result and q-r - i.e. should have value of max and sign of q-r};
+        my $u = $b - ( ( $b - $c ) * $q - ( $b - $a ) * $r )  / ( 2.0 * &_sign ( &_max ( abs ($q-$r), $tiny ), $q-$r ) );
+
+        #y must be same rule - i.e. this is $b + ( $glimit*($c-$b) );
+        #my $ulim = $b+$glimit*($c-$b);
+        my $ulim = $b + ( $glimit * ($c-$b) );
+        print qq{\n(8) we are in the loop as (fb: $f_b) is not less than (fc: $f_c)};
+
+        #y test the possibilities!
+
+        if ( ($b-$u)*($u-$c) > 0.0 ) {      #y parabolic u is between b and c 
+            $f_u = $function->($u);
+            print qq{\n(9) apparently parabolic (u: $u) is between (b: $b) and (c: $c) so we take (fu: $f_u)};
+            
+            #y have a minimium between b and c - i.e. is f(u) < f(c) - if so:
+            if ( $f_u  < $f_c ) { 
+            print qq{\n(10) in this case it seems that (fu: $f_u) is less than (fc: $f_c) - than means there as min between (b: $b) and (c: $c) - so we make a=b and b=u - and their function vals too};
+                $a = $b;
+                $b = $u;
+                $f_a = $f_b;
+                $f_b = $f_u;
+                #r/ the fat we have a statement like ´parabolic fit was useless´ indicates the return is REAL
+                return
+                # this - would kill whole sub: return;
+            }
+            # in c elsif is else if
+            elsif ( $f_u > $f_b ) {
+            print qq{\n(10) in this case it seems that (fu: $f_u) is NOT less than (fc: $f_c) - but we DO have a minimum between a and u};
+                $c = $u;
+                $f_c = $f_u;
+                #r/ the fat we have a statement like ´parabolic fit was useless´ indicates the return is REAL
+                return
+            }
+
+            #y parabolic fit was useless in this case - so we use a default magnification
+            print qq{\n(10) y parabolic fit was useless in this case - so we use a default magnification};
+            #/ lets assume standard annoying operator precedence....
+            #$u = $c+$gold*($c-$b);
+            $u = $c + ( $gold * ($c-$b) );
+            $f_u = $function->($u);
+        }
+
+#/ C uses define for constants?!? they define some basic behaviours?!?
+#define SHFT2(a,b,c) (a)=(b);(b)=(c);
+#define SHFT3(a,b,c,d) (a)=(b);(b)=(c);(c)=(d);
+
+        #y parabolic fit is between c and is not allowed
+        elsif  ( ($c-$u)*($u-$ulim) > 0 ) {
+
+            print qq{\n\n#### parabolic fit is between c - do not like this\n};
+
+            $f_u = $function->($u);
+
+            if ( $f_u < $f_c ) {
+                # the last of the value is totally fine to have local as it values is just given over
+                #/ op prec...
+                #my $u_other = $u+$gold*($u-$c);
+                my $u_other = $u + ( $gold * ($u-$c) );
+                # print qq{\n\nshft3\n\n};
+                #/ this should make b = c, c = u  and u = u_other
+                &_shft3(\$b,\$c,\$u,$u_other); 
+                #/ so as u is now u_other this shouldn´t be a prob
+                my $f_u_other = $function->($u_other);
+                &_shft3(\$f_b,\$f_c,\$f_u, \$f_u_other); 
+            }
+        }
+
+        #y limit parabolic u to max allowed
+        elsif ( ($u-$ulim)*($ulim-$c) >= 0.0 ) {
+            $u = $ulim;
+            $f_u = $function->($u);
+        }
+
+        #y reject parabolic u
+        else { 
+            #/ twats!!!
+            #$u = $c+$gold*($c-$b);
+            $u = $c + ( $gold * ($c-$b) );
+            $f_u = $function->($u);
+        }
+
+        #y elimineoldest points and will continue};
+        print qq{\n\n### eliminating oldest points and will continue};
+
+        &_shft3(\$a,\$b,\$c,\$u); 
+        #print qq{\n\nshft3\n\n};
+        &_shft3(\$f_a,\$f_b,\$f_c,\$f_u); 
+       
+    #/ end of while loop in theory
+    }
+}
+
+
+
+
+sub _sign {
+    my ($a, $b) = @_;
+    my $val = abs $a;
+    my $sig = $b >= 0 ? q{+} : q{-};
+    my $final = $sig.$val;
+    print qq{\n(*) in sign function (a: $a) and (b: $b) and (final: $final)};
+    # force numeric context
+    return 0+$final;
+}
+
+#=fs sign test
+# Take sign of b and magnitude of a
+#print qq{\nsign output: }, _sign(100,5);
+#print qq{\nsign output: }, _sign(-100,-5);
+#print qq{\nsign output: }, _sign(100,-5);
+#print qq{\nsign output: }, _sign(-100,5);
+#=fe
+
+sub _max {
+    my ($a, $b) = @_;
+    my $ret = $a >= $b ? $a : $b;
+    return $ret;
+}
+
+#=fs shft tests
+#($a, $b, $c, $d) = (1,5,10,100);
+#print qq{\nlets see $a and $b and $c and $d};
+#_shft3(\$a,\$b,\$c,\$d);
+#print qq{\nlets see $a and $b and $c and $d};
+
+#print qq{\n\nlets see shft2: $a and $b and $c};
+#_shft2(\$a,\$b,\$c);
+#print qq{\n\nlets see shft2: $a and $b and $c};
+#=fe
+
+sub _shft3 {
+    my ($a, $b, $c, $d) = @_;
+    #print qq{hi inside $a};
+    $$a = $$b;
+    $$b = $$c;
+    $$c = $$d;
+    return;
+}
+
+sub _shft2 {
+    my ($a, $b, $c) = @_;
+    #print qq{hi inside $a};
+    $$a = $$b;
+    $$b = $$c;
+    return;
+}
+
+#=fs
+#print qq{\ncalling max with 4 and 10: }, &_max(4, 10);
+#print qq{\ncalling max with 10 and 4: }, &_max(10, 4);
+#=fe
+
+#/ in terms of shift the last value can be a simple scoped var - as it is given to a more stable var
+
+
+
+sub fun { my $val = shift; return ((((($val-100)**2)+100)**.5)-15);}
+
+
+#/ nice....
+#sub fun { my $x = shift; my $b =  $x * sin($x) - 2 * cos($x); return $b}
+
+#/ looks like it works well with this:
+#sub fun { my $x = shift; my $b =  cos($x) + 1; return $b}
+
+
+#=fs look at function
+#print qq{\nfun on val: }, fun(50);
+#print qq{\nfun on val: }, fun(100);
+#print qq{\nfun on val: }, fun(500);
+#print qq{\nfun on val: }, fun(150);
+#=fe
+
+#&bracket(10,100, \&fun);
+
+#$a = -8;
+#$b = -12.7;
+#$a = 8;
+#$b = 2.7;
+$a = 4;
+$b = 4.7;
+
+print qq{\n------------------------------------------------\n};
+print qq{\nHERES THE BOUNDARY STUFF: (a: $a)---(b: $b) and (fa: }, fun($a), qq{) and (fb: }, fun($b), qq{)\n};
+print qq{\n------------------------------------------------\n};
+&bracket(\&fun);
+print qq{\n------------------------------------------------\n};
+print qq{\nHERES THE BOUNDARY STUFF: (a: $a)---(b: $b) and (c: $c) and (fa: }, fun($a), qq{) and (fb: }, fun($b), qq{) and (fc: }, fun($c),qq{)\n};
+print qq{\n------------------------------------------------\n};
+if (fun($b) < fun($a) && fun($b) < fun($c) ) { print qq{\n**** success on interval (a: $a) to (c: $c)\n} } else { print qq{\n**** did not work!!!\n} } 
+print qq{\n------------------------------------------------\n};
+my ($x_min, $f_min, $iterations) = &minimise(\&fun);
+
+#=fs old crap
+#my $fa = fun($a);
+#my $fb = fun($b);
+#my $fc = fun($c);
+
+#print qq{\n\nHERES THE BOUNDARY STUFF:\n\ta $a and b $b and c $c\nshouldnt a and c be different now?!?};
+#print qq{\n\nthis cannot be right - i.e. a and b cannot be 0\n\n};
+#=fe
+
+print qq{\n------------------------------------------------\n};
+print qq{\nMIN calculations: xmin $x_min and fmin $f_min and $iterations iterations\n};
+print qq{\n------------------------------------------------\n};
+
+#=fs old stuff
+#&bracket(sub { my $val = shift; return (($val-100)**2)**.5;  } );
+#print qq{\nheres the boundary stuff: $a, $b, $c and $f_a, $f_b, $f_c};
+
+#&bracket(sub { my $val = shift; return (($val-100)**4)**.333;  } );
+#print qq{\nheres the boundary stuff: $a, $b, $c and $f_a, $f_b, $f_c};
+
+
+# initializer list. It is a special syntax limited to use in constructors.
+# blah (type a_name,...) : something(a_name) {} 
+# means that constructor for something will be passed a_name
+
+# in cases where they are integers can use: 
+# blah (type a_name,...) {
+#   this->something=a_name;    - i.e. like $self->{something}=$a_name;
+
+#print qq{\nthe mins are $xmin and $fmin\n};
+
+# Doub minimise (T &func) - thus will need return of a numeric and my $func = shift
+#=fe
+
+print qq{\nhere is a test of this - try with 10.5896674499017: }, fun(10.5896674499017), qq{ - makes fuck all sense to me they never agree?!?\n};
+#my @blah = (28..40);
+#my @blah = (40..60);
+my @blah = (95..105);
+#for (@blah) { $_ /= 10 }
+#for (0..22) { print qq{\nhere: x $_ and f }, &fun($_); }
+
+for (@blah) { print qq{\nhere: x $_ and f }, &fun($_); }
+
+
+
+print qq{\n\nquick test on 3.14159265559866: }, fun(3.14159265559866);
+print qq{\n\nquick test on xmin $xmin: }, fun($xmin);
+
